@@ -9,7 +9,9 @@ declare global {
 
 export function getDb(): Database.Database {
   if (!global._db) {
-    const dbPath = path.resolve(process.cwd(), "data/swiggy.db");
+    // On Render, use the persistent disk mounted at /data; fallback to local for dev
+    const dbDir = process.env.NODE_ENV === "production" ? "/data" : path.resolve(process.cwd(), "data");
+    const dbPath = path.join(dbDir, "swiggy.db");
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     global._db = new Database(dbPath);
     global._db.pragma("journal_mode = WAL");
