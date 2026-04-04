@@ -28,6 +28,11 @@ export default function CartPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [placingOrder, setPlacingOrder] = useState(false);
 
+  const hour = new Date().getHours();
+  const isLullHour = hour >= 5 && hour <= 17; // 5AM–5PM = lull window
+  const freeDeliveryThreshold = isLullHour ? 149 : 249;
+  const minOrderThreshold = isLullHour ? 179 : 199;
+
   const DELIVERY_FEE = total >= 199 ? 0 : 25;
   const DISCOUNT = appliedCoupon === "D2MART10" ? Math.round(total * 0.1) : 0;
   const TAXES = Math.round((total - DISCOUNT) * 0.05);
@@ -97,6 +102,30 @@ export default function CartPage() {
             <p className="text-xs text-green-600">Your order is ready to be picked</p>
           </div>
         </div>
+
+        {/* ── Lull-hour deal banner ── */}
+        {isLullHour ? (
+          <div className="bg-amber-50 border border-amber-300 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <span className="text-lg shrink-0">🕐</span>
+            <div className="flex-1">
+              <p className="text-sm font-black text-amber-700">Lull Hour Deal Active</p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                Free delivery above <strong>₹{freeDeliveryThreshold}</strong> · Min order <strong>₹{minOrderThreshold}</strong>
+              </p>
+            </div>
+            <span className="text-[10px] font-black bg-amber-400 text-amber-900 px-2 py-1 rounded-full shrink-0">5AM–5PM</span>
+          </div>
+        ) : (
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <span className="text-lg shrink-0">🌙</span>
+            <div>
+              <p className="text-sm font-bold text-[#3d4152]">Peak Hours</p>
+              <p className="text-xs text-[#93959f] mt-0.5">
+                Free delivery above <strong>₹{freeDeliveryThreshold}</strong> · Min order ₹{minOrderThreshold}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── Cart items ── */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -289,7 +318,7 @@ export default function CartPage() {
               </span>
             </div>
             {DELIVERY_FEE === 0 && (
-              <p className="text-xs text-[#0c831f]">🎉 Free delivery on orders above ₹199</p>
+              <p className="text-xs text-[#0c831f]">🎉 Free delivery on orders above ₹{freeDeliveryThreshold}</p>
             )}
             <div className="flex justify-between text-[#93959f]">
               <span>GST & charges</span>

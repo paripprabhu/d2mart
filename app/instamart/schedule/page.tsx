@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ChevronRight, Check } from "lucide-react";
+import { ArrowLeft, ChevronRight, Check, Lock, Unlock } from "lucide-react";
 import { GroceryProduct } from "@/app/lib/types";
 import ScheduleItemPicker, { ScheduleCartItem } from "@/app/components/instamart/schedule/ScheduleItemPicker";
 import DayPicker from "@/app/components/instamart/schedule/DayPicker";
@@ -28,6 +28,21 @@ export default function SchedulePage() {
   const [plan, setPlan]             = useState<"per_day" | "at_once">("per_day");
   const [address, setAddress]       = useState("tapmi");
   const [submitting, setSubmitting] = useState(false);
+  const [commitTier, setCommitTier] = useState(0);
+
+  const tierDiscounts = [0, 25, 50, 100];
+  const COMMIT_TIERS = [
+    { label: "On-Demand", duration: "No commitment", discount: 0, color: "text-[#93959f]", borderActive: "border-[#0c831f]" },
+    { label: "1 Week",    duration: "7 days",         discount: 25,  color: "text-amber-500",   borderActive: "border-amber-400" },
+    { label: "2 Weeks",   duration: "14 days",        discount: 50,  color: "text-[#0c831f]",   borderActive: "border-[#0c831f]" },
+    { label: "1 Month",   duration: "30 days",        discount: 100, color: "text-violet-500",  borderActive: "border-violet-400" },
+  ];
+  const RUPEE_STORE = [
+    { status: "Locked",          items: "Schedule for 1+ week to unlock access to ₹1 deals", examples: "",                                                                      borderCls: "border-gray-200",   bgCls: "bg-gray-50",    labelCls: "text-[#93959f]" },
+    { status: "12 Items Unlocked",  items: "12 selected high-demand items available at ₹1 each", examples: "e.g. salt, sugar, tea bags, bread — items we forecast you'll need",  borderCls: "border-amber-300",  bgCls: "bg-amber-50",   labelCls: "text-amber-600" },
+    { status: "28 Items Unlocked",  items: "28 selected high-demand items available at ₹1 each", examples: "e.g. grains, oils, dairy basics, hygiene essentials",                borderCls: "border-green-300",  bgCls: "bg-green-50",   labelCls: "text-[#0c831f]" },
+    { status: "50+ Items Unlocked", items: "50+ selected high-demand items available at ₹1 each", examples: "Our broadest forecast list — updated based on ordering patterns",   borderCls: "border-violet-300", bgCls: "bg-violet-50",  labelCls: "text-violet-600" },
+  ];
 
   useEffect(() => {
     fetch("/api/grocery/products")
@@ -145,14 +160,89 @@ export default function SchedulePage() {
           <TimeSlotPicker selected={timeSlot} onChange={setTimeSlot} />
         )}
         {step === 4 && (
-          <PaymentPlanPicker
-            cart={cart}
-            days={days}
-            selectedPlan={plan}
-            selectedAddress={address}
-            onChange={setPlan}
-            onAddressChange={setAddress}
-          />
+          <div className="space-y-4">
+
+            {/* ── Commitment Tier Cards ── */}
+            <div className="bg-white rounded-2xl shadow-sm p-4">
+              <p className="text-xs font-bold text-[#93959f] uppercase tracking-wider mb-3">Schedule Commitment</p>
+              <div className="grid grid-cols-2 gap-2.5">
+                {COMMIT_TIERS.map((tier, i) => {
+                  const isActive = commitTier === i;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setCommitTier(i)}
+                      className={`flex flex-col items-start p-3 rounded-xl border-2 text-left transition-all ${
+                        isActive ? `${tier.borderActive} bg-white` : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1.5">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          isActive ? tier.borderActive : "border-gray-300"
+                        }`}>
+                          {isActive && <span className="w-2 h-2 rounded-full bg-current" />}
+                        </div>
+                        {tier.discount > 0 && (
+                          <span className="text-[9px] font-black bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded-full leading-none">
+                            ₹{tier.discount} off
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-[11px] font-black leading-none mb-0.5 ${isActive ? tier.color : "text-[#3d4152]"}`}>
+                        {tier.label}
+                      </p>
+                      <p className="text-[10px] text-[#93959f]">{tier.duration}</p>
+                      {i > 0 && (
+                        <p className={`text-[9px] mt-1 font-semibold ${isActive ? tier.color : "text-[#93959f]"}`}>
+                          + {[0, 12, 28, 50][i]}{i === 3 ? "+" : ""} items at ₹1
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {commitTier > 0 && (
+                <div className="mt-3 flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+                  <Check size={13} className="text-[#0c831f] shrink-0" />
+                  <p className="text-xs font-bold text-[#0c831f]">₹{tierDiscounts[commitTier]} off applied to this schedule</p>
+                </div>
+              )}
+            </div>
+
+            {/* ── Payment Plan ── */}
+            <PaymentPlanPicker
+              cart={cart}
+              days={days}
+              selectedPlan={plan}
+              selectedAddress={address}
+              onChange={setPlan}
+              onAddressChange={setAddress}
+            />
+
+            {/* ── ₹1 Rupee Store Access Panel ── */}
+            {(() => {
+              const cfg = RUPEE_STORE[commitTier];
+              return (
+                <div className={`rounded-2xl border-2 ${cfg.borderCls} ${cfg.bgCls} p-4 text-center transition-all`}>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    {commitTier === 0
+                      ? <Lock size={16} className="text-[#93959f]" />
+                      : <Unlock size={16} className={cfg.labelCls} />
+                    }
+                    <p className={`text-xs font-black uppercase tracking-wider ${cfg.labelCls}`}>₹1 Deals · {cfg.status}</p>
+                  </div>
+                  <p className={`text-sm font-bold ${cfg.labelCls}`}>{cfg.items}</p>
+                  {cfg.examples && (
+                    <p className="text-[11px] text-[#93959f] mt-1 italic">{cfg.examples}</p>
+                  )}
+                  {commitTier === 0 && (
+                    <p className="text-[11px] text-[#93959f] mt-2">Choose 1 Week or longer to unlock access to selected high-demand items at ₹1 — curated based on what schedulers in Manipal order most</p>
+                  )}
+                </div>
+              );
+            })()}
+
+          </div>
         )}
       </div>
 
